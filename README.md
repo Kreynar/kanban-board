@@ -1,3 +1,40 @@
+## Task
+
+Your task is to write a scrum (or kanban) board, with possibility to dynamically add
+columns. That means, that on the first opening there should be no columns at all, and
+those has to be added manually. Column has to have a title.
+
+Column can be renamed or deleted. Columns can contain tasks.
+
+Task can be added into any of the columns. Task itself has a title, which is displayed
+in the board. Title can be changed by opening task in a modal. Also, by opening task
+in modal, there will be possibility to add a description of a task.
+
+Task can be dragged into different columns via drag'n'drop.
+
+Task can be deleted.
+
+Task can be accessed via tasks url, where information is displayed: title, description,
+column title in which task is now, time when task was created and when it was edited.
+Also task can be deleted in this page.
+
+### Requirements
+
+Use react and redux.
+
+Store all columns and tasks into localstorage.
+
+### Advanced
+
+Possibility to add different scrum (or kanban) boards, with possibility to assign alises
+to them, by which board can be opened.
+
+### Example
+
+Example boards can be found on any managed board solutions, for example
+asana.com
+
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
