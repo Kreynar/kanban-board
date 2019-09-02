@@ -4,7 +4,9 @@ import {
   REMOVE_COLUMN,
   ADD_TASK,
   CHANGE_TASK,
-  REORDER_TASKS
+  MOVE_TASK_IN_SAME_COLUMN,
+  REMOVE_TASK,
+  MOVE_TASK_TO_ANOTHER_COLUMN
 } from "../actions";
 
 const initialState = {
@@ -19,8 +21,24 @@ const getReorderedTasks = (tasks, taskSourceIndex, taskDestinationIndex) => {
   return result;
 };
 
+const getReorderedColumns = ({
+  sourceTasksArray,
+  destinationTasksArray,
+  sourceTaskIndex,
+  destinationTaskIndex
+}) => {
+  const sourceTasksArrayClone = [...sourceTasksArray];
+  const destinationTasksArrayClone = [...destinationTasksArray];
+  const [removedTask] = sourceTasksArrayClone.splice(sourceTaskIndex, 1);
+  destinationTasksArrayClone.splice(destinationTaskIndex, 0, removedTask);
+  return {
+    sourceTasksArray: sourceTasksArrayClone,
+    destinationTasksArray: destinationTasksArrayClone
+  };
+};
+
 export default function rootReducer(state = initialState, { type, payload }) {
-  let columns;
+  let columns, currentDateTime;
   switch (type) {
     case ADD_COLUMN:
       const idOfLastColumn =
@@ -57,8 +75,9 @@ export default function rootReducer(state = initialState, { type, payload }) {
         []
       );
       const taskWithHighestId = allColumnsTasks.sort(
-        (taskPrevious, taskNext) => taskNext - taskPrevious
+        (taskPrevious, taskNext) => taskNext.id - taskPrevious.id
       )[0];
+      currentDateTime = new Date().toLocaleString("en-GB");
       columns = state.columns.map(column =>
         column.id === payload.columnId
           ? {
@@ -67,7 +86,9 @@ export default function rootReducer(state = initialState, { type, payload }) {
                 {
                   id: taskWithHighestId ? taskWithHighestId.id + 1 : 1,
                   title: payload.title,
-                  description: payload.description
+                  description: payload.description,
+                  timeCreated: currentDateTime,
+                  timeUpdated: currentDateTime
                 },
                 ...column.tasks
               ]
@@ -79,6 +100,7 @@ export default function rootReducer(state = initialState, { type, payload }) {
         columns
       };
     case CHANGE_TASK:
+      currentDateTime = new Date().toLocaleString("en-GB");
       columns = state.columns.map(column => ({
         ...column,
         tasks: column.tasks.map(task =>
@@ -86,7 +108,8 @@ export default function rootReducer(state = initialState, { type, payload }) {
             ? {
                 ...task,
                 title: payload.title,
-                description: payload.description
+                description: payload.description,
+                timeUpdated: currentDateTime
               }
             : task
         )
@@ -95,7 +118,16 @@ export default function rootReducer(state = initialState, { type, payload }) {
         ...state,
         columns
       };
-    case REORDER_TASKS:
+    case REMOVE_TASK:
+      columns = state.columns.map(column => ({
+        ...column,
+        tasks: column.tasks.filter(task => task.id !== payload)
+      }));
+      return {
+        ...state,
+        columns
+      };
+    case MOVE_TASK_IN_SAME_COLUMN:
       columns = state.columns.map(column => {
         if (column.id === payload.columnId) {
           return {
@@ -110,6 +142,32 @@ export default function rootReducer(state = initialState, { type, payload }) {
           return column;
         }
       });
+      return {
+        ...state,
+        columns
+      };
+    case MOVE_TASK_TO_ANOTHER_COLUMN:
+      const { sourceTasksArray, destinationTasksArray } = getReorderedColumns({
+        sourceTasksArray: state.columns.find(
+          column => column.id === payload.sourceColumnId
+        ).tasks,
+        destinationTasksArray: state.columns.find(
+          column => column.id === payload.destinationColumnId
+        ).tasks,
+        sourceTaskIndex: payload.sourceTaskIndex,
+        destinationTaskIndex: payload.destinationTaskIndex
+      });
+      columns = state.columns.map(column => {
+        if (column.id === payload.sourceColumnId) {
+          return { ...column, tasks: sourceTasksArray };
+        } else if (column.id === payload.destinationColumnId) {
+          return { ...column, tasks: destinationTasksArray };
+        } else return column;
+      });
+      return {
+        ...state,
+        columns
+      };
     default:
       return state;
   }
