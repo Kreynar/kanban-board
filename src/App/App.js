@@ -1,5 +1,4 @@
 import React from "react";
-import "./App.scss";
 import Board from "./Board/Board";
 import { BrowserRouter as Router, Route } from "react-router-dom";
 import TaskPage from "./TaskPage/TaskPage";
