@@ -8,8 +8,11 @@ import {
   createActionRemoveColumn,
   createActionAddTask,
   createActionChangeTask,
-  createActionReorderTasks
+  createActionMoveTaskInSameColumn,
+  createActionRemoveTask,
+  createActionMoveTaskToAnotherColumn
 } from "store/actions";
+import { Link } from "react-router-dom";
 
 Modal.setAppElement("#root");
 
@@ -19,20 +22,6 @@ const getItems = (count, offset = 0) =>
     id: `item-${k + offset}`,
     content: `item ${k + offset}`
   }));
-
-const move = (source, destination, droppableSource, droppableDestination) => {
-  const sourceClone = Array.from(source);
-  const destClone = Array.from(destination);
-  const [removed] = sourceClone.splice(droppableSource.index, 1);
-
-  destClone.splice(droppableDestination.index, 0, removed);
-
-  const result = {};
-  result[droppableSource.droppableId] = sourceClone;
-  result[droppableDestination.droppableId] = destClone;
-
-  return result;
-};
 
 const grid = 8;
 
@@ -69,52 +58,24 @@ class Board extends Component {
   taskTitleInputRef = React.createRef();
   taskDescriptionInputRef = React.createRef();
 
-  /**
-   * A semi-generic way to handle multiple lists. Matches
-   * the IDs of the droppable container to the names of the
-   * source arrays stored in the state.
-   */
-  id2List = {
-    droppable: "items",
-    droppable2: "selected"
-  };
-
   onDragEnd = result => {
-    const getList = droppableId => this.state[this.id2List[droppableId]];
-
     const { source, destination } = result;
-
     if (destination) {
       const sourceColumnId = source.droppableId;
       const destinationColumnId = destination.droppableId;
       if (sourceColumnId === destinationColumnId) {
-        this.props.reorderTasks(
+        this.props.moveTaskInSameColumn(
           sourceColumnId,
           source.index,
           destination.index
         );
-        // const column = reorder(
-        //   this.props.columns.find(column => column.id === sourceColumnId),
-        //   source.index,
-        //   destination.index
-        // );
-        // let state = { column };
-        // if (sourceColumnId === "droppable2") {
-        //   state = { selected: column };
-        // }
-        // this.setState(state);
       } else {
-        const result = move(
-          this.getList(sourceColumnId),
-          this.getList(destinationColumnId),
-          source,
-          destination
+        this.props.moveTaskToAnotherColumn(
+          sourceColumnId,
+          destinationColumnId,
+          source.index,
+          destination.index
         );
-
-        this.setState({
-          items: result.droppable,
-          selected: result.droppable2
-        });
       }
     }
   };
@@ -129,14 +90,19 @@ class Board extends Component {
   closeColumnModal = () => this.setState({ isColumnModalShown: false });
 
   handleColumnModalSubmit = () => {
-    const { editedColumnId } = this.state;
-    const { changeColumnTitle, addColumn } = this.props;
-    if (editedColumnId) {
-      changeColumnTitle(editedColumnId, this.columnTitleInputRef.current.value);
-    } else {
-      addColumn(this.columnTitleInputRef.current.value);
+    if (this.columnTitleInputRef.current.value) {
+      const { editedColumnId } = this.state;
+      const { changeColumnTitle, addColumn } = this.props;
+      if (editedColumnId) {
+        changeColumnTitle(
+          editedColumnId,
+          this.columnTitleInputRef.current.value
+        );
+      } else {
+        addColumn(this.columnTitleInputRef.current.value);
+      }
+      this.setState({ isColumnModalShown: false });
     }
-    this.setState({ isColumnModalShown: false });
   };
 
   openTaskModal = ({ editedColumnId = null, editedTaskId = null }) => {
@@ -156,90 +122,147 @@ class Board extends Component {
     this.setState({ isTaskModalShown: false });
   };
 
+  onTaskRemove = taskId => {
+    this.setState({ isTaskModalShown: false });
+    this.props.removeTask(taskId);
+  };
+
   closeTaskModal = () => this.setState({ isTaskModalShown: false });
 
   render() {
-    const { isColumnModalShown, isTaskModalShown, editedTaskId } = this.state;
+    const {
+      isColumnModalShown,
+      isTaskModalShown,
+      editedTaskId,
+      editedColumnId
+    } = this.state;
     const { columns, removeColumn } = this.props;
+    const editedColumnTitle =
+      editedColumnId &&
+      columns.find(column => column.id === editedColumnId) &&
+      columns.find(column => column.id === editedColumnId).title;
+    const editedTask =
+      editedTaskId &&
+      columns
+        .reduce((tasks, column) => (tasks = [...column.tasks, ...tasks]), [])
+        .find(task => task.id === editedTaskId);
+
     return (
       <div>
         <button onClick={() => this.openColumnModal()}>Add column</button>
         <Modal isOpen={isColumnModalShown} contentLabel="Column">
           <>
-            <button onClick={this.closeColumnModal}>Close</button>
-            Title:
-            <input type="text" ref={this.columnTitleInputRef} />
-            <button onClick={this.handleColumnModalSubmit}>OK</button>
+            <div>
+              <button onClick={this.closeColumnModal}>Close</button>
+            </div>
+            <div>
+              Title:
+              <input
+                type="text"
+                ref={this.columnTitleInputRef}
+                defaultValue={editedColumnTitle}
+              />
+            </div>
+            <div>
+              <button onClick={this.handleColumnModalSubmit}>OK</button>
+            </div>
           </>
         </Modal>
         <Modal isOpen={isTaskModalShown} contentLabel="Task">
           <>
-            <button onClick={this.closeTaskModal}>Close</button>
-            Title:
-            <input type="text" ref={this.taskTitleInputRef} />
-            Description:
-            <input type="text" ref={this.taskDescriptionInputRef} />
-            <button onClick={() => this.removeTask(editedTaskId)}>
-              Remove
-            </button>
-            <button onClick={() => this.handleTaskModalSubmit()}>OK</button>
+            <div>
+              <button onClick={this.closeTaskModal}>Close</button>
+            </div>
+            {editedTaskId && (
+              <button>
+                <Link to={`/tasks/${editedTaskId}`}>Go to page</Link>
+              </button>
+            )}
+            <div>
+              Title:
+              <input
+                type="text"
+                ref={this.taskTitleInputRef}
+                defaultValue={editedTask && editedTask.title}
+              />
+            </div>
+            <div>
+              Description:
+              <input
+                type="text"
+                ref={this.taskDescriptionInputRef}
+                defaultValue={editedTask && editedTask.description}
+              />
+            </div>
+            {editedTaskId && (
+              <div>
+                <button onClick={() => this.onTaskRemove(editedTaskId)}>
+                  Remove
+                </button>
+              </div>
+            )}
+            <div>
+              <button onClick={() => this.handleTaskModalSubmit()}>OK</button>
+            </div>
           </>
         </Modal>
         {columns.length ? (
           <DragDropContext onDragEnd={this.onDragEnd}>
-            {columns.map(column => (
-              <Droppable droppableId={column.id} key={column.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    style={getListStyle(snapshot.isDraggingOver)}
-                  >
-                    <button onClick={() => this.openColumnModal(column.id)}>
-                      {column.title}
-                    </button>
-                    {column.tasks.length === 0 && (
-                      <button onClick={() => removeColumn(column.id)}>
-                        Remove column
-                      </button>
-                    )}
-                    <button
-                      onClick={() =>
-                        this.openTaskModal({ editedColumnId: column.id })
-                      }
+            <div style={{ display: "flex" }}>
+              {columns.map(column => (
+                <Droppable droppableId={column.id} key={column.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      style={getListStyle(snapshot.isDraggingOver)}
                     >
-                      Add task
-                    </button>
-                    {column.tasks.map((task, index) => (
-                      <Draggable
-                        key={task.id}
-                        draggableId={task.id}
-                        index={index}
+                      <button onClick={() => this.openColumnModal(column.id)}>
+                        {column.title}
+                      </button>
+                      {column.tasks.length === 0 && (
+                        <button onClick={() => removeColumn(column.id)}>
+                          Remove column
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          this.openTaskModal({ editedColumnId: column.id })
+                        }
                       >
-                        {(provided, snapshot) => (
-                          <div
-                            onClick={() =>
-                              this.openTaskModal({ editedTaskId: task.id })
-                            }
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={getItemStyle(
-                              snapshot.isDragging,
-                              provided.draggableProps.style
-                            )}
-                          >
-                            <div>
-                              {task.id} - {task.title}
+                        Add task
+                      </button>
+                      {column.tasks.map((task, index) => (
+                        <Draggable
+                          key={task.id}
+                          draggableId={task.id}
+                          index={index}
+                        >
+                          {(provided, snapshot) => (
+                            <div
+                              onClick={() =>
+                                this.openTaskModal({ editedTaskId: task.id })
+                              }
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              style={getItemStyle(
+                                snapshot.isDragging,
+                                provided.draggableProps.style
+                              )}
+                            >
+                              <div>
+                                {task.id} - {task.title}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            ))}
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              ))}
+            </div>
           </DragDropContext>
         ) : (
           "No columns"
@@ -262,9 +285,28 @@ const mapDispatchToProps = dispatch => ({
     dispatch(createActionAddTask(columnId, title, description)),
   changeTask: (taskId, title, description) =>
     dispatch(createActionChangeTask(taskId, title, description)),
-  reorderTasks: (columnId, taskSourceIndex, taskDestinationIndex) =>
+  removeTask: taskId => dispatch(createActionRemoveTask(taskId)),
+  moveTaskInSameColumn: (columnId, taskSourceIndex, taskDestinationIndex) =>
     dispatch(
-      createActionReorderTasks(columnId, taskSourceIndex, taskDestinationIndex)
+      createActionMoveTaskInSameColumn(
+        columnId,
+        taskSourceIndex,
+        taskDestinationIndex
+      )
+    ),
+  moveTaskToAnotherColumn: (
+    sourceColumnId,
+    destinationColumnId,
+    sourceTaskIndex,
+    destinationTaskIndex
+  ) =>
+    dispatch(
+      createActionMoveTaskToAnotherColumn(
+        sourceColumnId,
+        destinationColumnId,
+        sourceTaskIndex,
+        destinationTaskIndex
+      )
     )
 });
 

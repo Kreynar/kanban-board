@@ -3,7 +3,9 @@ export const CHANGE_COLUMN_TITLE = "CHANGE_COLUMN_TITLE";
 export const REMOVE_COLUMN = "REMOVE_COLUMN";
 export const ADD_TASK = "ADD_TASK";
 export const CHANGE_TASK = "CHANGE_TASK";
-export const REORDER_TASKS = "REORDER_TASKS";
+export const REMOVE_TASK = "REMOVE_TASK";
+export const MOVE_TASK_IN_SAME_COLUMN = "MOVE_TASK_IN_SAME_COLUMN";
+export const MOVE_TASK_TO_ANOTHER_COLUMN = "MOVE_TASK_TO_ANOTHER_COLUMN";
 
 export const createActionAddColumn = title => ({
   type: ADD_COLUMN,
@@ -30,11 +32,31 @@ export const createActionChangeTask = (taskId, title, description) => ({
   payload: { taskId, title, description }
 });
 
-export const createActionReorderTasks = (
+export const createActionRemoveTask = taskId => ({
+  type: REMOVE_TASK,
+  payload: taskId
+});
+
+export const createActionMoveTaskInSameColumn = (
   columnId,
   taskSourceIndex,
   taskDestinationIndex
 ) => ({
-  type: REORDER_TASKS,
+  type: MOVE_TASK_IN_SAME_COLUMN,
   payload: { columnId, taskSourceIndex, taskDestinationIndex }
+});
+
+export const createActionMoveTaskToAnotherColumn = (
+  sourceColumnId,
+  destinationColumnId,
+  sourceTaskIndex,
+  destinationTaskIndex
+) => ({
+  type: MOVE_TASK_TO_ANOTHER_COLUMN,
+  payload: {
+    sourceColumnId,
+    destinationColumnId,
+    sourceTaskIndex,
+    destinationTaskIndex
+  }
 });
