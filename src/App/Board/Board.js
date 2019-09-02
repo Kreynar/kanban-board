@@ -16,13 +16,6 @@ import { Link } from "react-router-dom";
 
 Modal.setAppElement("#root");
 
-// fake data generator
-const getItems = (count, offset = 0) =>
-  Array.from({ length: count }, (v, k) => k).map(k => ({
-    id: `item-${k + offset}`,
-    content: `item ${k + offset}`
-  }));
-
 const grid = 8;
 
 const getItemStyle = (isDragging, draggableStyle) => ({
@@ -48,8 +41,6 @@ const TITLE_REQUIRED_WARNING = "Please enter title";
 
 class Board extends Component {
   state = {
-    items: getItems(10),
-    selected: getItems(5, 10),
     isColumnModalShown: false,
     editedColumnId: null,
     isTaskModalShown: false,
