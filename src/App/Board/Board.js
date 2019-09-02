@@ -44,6 +44,8 @@ const getListStyle = isDraggingOver => ({
   width: 250
 });
 
+const TITLE_REQUIRED_WARNING = "Please enter title";
+
 class Board extends Component {
   state = {
     items: getItems(10),
@@ -51,7 +53,8 @@ class Board extends Component {
     isColumnModalShown: false,
     editedColumnId: null,
     isTaskModalShown: false,
-    editedTaskId: null
+    editedTaskId: null,
+    isTitleRequiredWarningShown: false
   };
 
   columnTitleInputRef = React.createRef();
@@ -83,7 +86,8 @@ class Board extends Component {
   openColumnModal = (editedColumnId = null) => {
     this.setState({
       editedColumnId,
-      isColumnModalShown: true
+      isColumnModalShown: true,
+      isTitleRequiredWarningShown: false
     });
   };
 
@@ -102,24 +106,35 @@ class Board extends Component {
         addColumn(this.columnTitleInputRef.current.value);
       }
       this.setState({ isColumnModalShown: false });
+    } else {
+      this.setState({ isTitleRequiredWarningShown: true });
     }
   };
 
   openTaskModal = ({ editedColumnId = null, editedTaskId = null }) => {
-    this.setState({ isTaskModalShown: true, editedTaskId, editedColumnId });
+    this.setState({
+      isTaskModalShown: true,
+      editedTaskId,
+      editedColumnId,
+      isTitleRequiredWarningShown: false
+    });
   };
 
   handleTaskModalSubmit = () => {
-    const { editedTaskId, editedColumnId } = this.state;
-    const { addTask, changeTask } = this.props;
     const title = this.taskTitleInputRef.current.value;
-    const description = this.taskDescriptionInputRef.current.value;
-    if (editedTaskId) {
-      changeTask(editedTaskId, title, description);
+    if (title) {
+      const { editedTaskId, editedColumnId } = this.state;
+      const { addTask, changeTask } = this.props;
+      const description = this.taskDescriptionInputRef.current.value;
+      if (editedTaskId) {
+        changeTask(editedTaskId, title, description);
+      } else {
+        addTask(editedColumnId, title, description);
+      }
+      this.setState({ isTaskModalShown: false });
     } else {
-      addTask(editedColumnId, title, description);
+      this.setState({ isTitleRequiredWarningShown: true });
     }
-    this.setState({ isTaskModalShown: false });
   };
 
   onTaskRemove = taskId => {
@@ -134,7 +149,8 @@ class Board extends Component {
       isColumnModalShown,
       isTaskModalShown,
       editedTaskId,
-      editedColumnId
+      editedColumnId,
+      isTitleRequiredWarningShown
     } = this.state;
     const { columns, removeColumn } = this.props;
     const editedColumnTitle =
@@ -165,6 +181,7 @@ class Board extends Component {
             </div>
             <div>
               <button onClick={this.handleColumnModalSubmit}>OK</button>
+              {isTitleRequiredWarningShown && TITLE_REQUIRED_WARNING}
             </div>
           </>
         </Modal>
@@ -203,6 +220,7 @@ class Board extends Component {
             )}
             <div>
               <button onClick={() => this.handleTaskModalSubmit()}>OK</button>
+              {isTitleRequiredWarningShown && TITLE_REQUIRED_WARNING}
             </div>
           </>
         </Modal>

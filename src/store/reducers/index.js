@@ -9,8 +9,16 @@ import {
   MOVE_TASK_TO_ANOTHER_COLUMN
 } from "../actions";
 
+const getColumnsFromLocalStorage = () => {
+  const columns = localStorage.getItem("columns");
+  return columns && JSON.parse(columns);
+};
+
+const storeColumnsInLocalStorage = columns =>
+  localStorage.setItem("columns", JSON.stringify(columns));
+
 const initialState = {
-  columns: []
+  columns: getColumnsFromLocalStorage() || []
 };
 
 const getReorderedTasks = (tasks, taskSourceIndex, taskDestinationIndex) => {
@@ -44,29 +52,30 @@ export default function rootReducer(state = initialState, { type, payload }) {
       const idOfLastColumn =
         state.columns[state.columns.length - 1] &&
         state.columns[state.columns.length - 1].id;
+      columns = [
+        ...state.columns,
+        {
+          id: idOfLastColumn ? idOfLastColumn + 1 : 1,
+          title: payload,
+          tasks: []
+        }
+      ];
+      storeColumnsInLocalStorage(columns);
       return {
-        ...state,
-        columns: [
-          ...state.columns,
-          {
-            id: idOfLastColumn ? idOfLastColumn + 1 : 1,
-            title: payload,
-            tasks: []
-          }
-        ]
+        columns
       };
     case CHANGE_COLUMN_TITLE:
       columns = state.columns.map(column =>
         column.id === payload.id ? { ...column, title: payload.title } : column
       );
+      storeColumnsInLocalStorage(columns);
       return {
-        ...state,
         columns
       };
     case REMOVE_COLUMN:
       columns = state.columns.filter(column => column.id !== payload);
+      storeColumnsInLocalStorage(columns);
       return {
-        ...state,
         columns
       };
     case ADD_TASK:
@@ -95,8 +104,8 @@ export default function rootReducer(state = initialState, { type, payload }) {
             }
           : column
       );
+      storeColumnsInLocalStorage(columns);
       return {
-        ...state,
         columns
       };
     case CHANGE_TASK:
@@ -114,8 +123,8 @@ export default function rootReducer(state = initialState, { type, payload }) {
             : task
         )
       }));
+      storeColumnsInLocalStorage(columns);
       return {
-        ...state,
         columns
       };
     case REMOVE_TASK:
@@ -123,8 +132,8 @@ export default function rootReducer(state = initialState, { type, payload }) {
         ...column,
         tasks: column.tasks.filter(task => task.id !== payload)
       }));
+      storeColumnsInLocalStorage(columns);
       return {
-        ...state,
         columns
       };
     case MOVE_TASK_IN_SAME_COLUMN:
@@ -142,8 +151,8 @@ export default function rootReducer(state = initialState, { type, payload }) {
           return column;
         }
       });
+      storeColumnsInLocalStorage(columns);
       return {
-        ...state,
         columns
       };
     case MOVE_TASK_TO_ANOTHER_COLUMN:
@@ -164,8 +173,8 @@ export default function rootReducer(state = initialState, { type, payload }) {
           return { ...column, tasks: destinationTasksArray };
         } else return column;
       });
+      storeColumnsInLocalStorage(columns);
       return {
-        ...state,
         columns
       };
     default:
